@@ -66,8 +66,8 @@ allen_cunnen_approx <- function(rho, lambda) {
   #Obtain mean and variance for arrival times and service times for better accuracy
   #Using above given formulas
   E_arrival <- getMeanVarianceErlang(lambda = lambda)$mean
-  E_service <- getMeanVarianceWeibull(rho = rho)$mean
-  var_arrival <- getMeanVarianceErlang()$var
+  E_service <- getMeanVarianceWeibull(rho =)$mean
+  var_arrival <- getMeanVarianceErlang(lambda = lambda)$var
   var_service <- getMeanVarianceWeibull(rho = rho)$var
   
   lambda <- 1/E_tau
