@@ -214,8 +214,7 @@ analysisServTime()
 p=c(0.4, 0.7, 0.85, 0.925)
 N = 100000
   
-p[1]
-main(p,N)
+main(p[4],N)
   
   
   
