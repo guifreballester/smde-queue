@@ -1,19 +1,22 @@
-sampling <- function (){
+# Function to analyze the service time on N instances and compare it to the theoretical values 
+# + creating histograms :
+analysisServTime=function(p, N=10000) {
   a = 0.6521
-  rho = 1
   
-  #E [tau]
-  E = 66
-  b = create_b(rho,E)
+  
+  #I have tried those by myself
+  p = 0.4
+  
+  b = create_b(p, E)
   
     
-  samples = rweibull(n=10000, shape = a, scale = b )
+  samples = rweibull(N, shape = a, scale = b )
   
   mean_service_samples=mean(samples)
   var_service_samples=var(samples)
   
-  mean_service_theoretical = getMeanVarianceWeibull(rho)$mean
-  var_service_theoretical = getMeanVarianceWeibull(rho)$var
+  mean_service_theoretical = getMeanVarianceWeibull(p)$mean
+  var_service_theoretical = getMeanVarianceWeibull(p)$var
   
   
   
@@ -32,8 +35,8 @@ sampling <- function (){
 }
 
 #Creation b with my E[tau]=66:
-create_b=function(rho,E=66,a=0.6521) {
-  return (rho * E / gamma((a+1)/a))
+create_b=function(p,E=66,a=0.6521) {
+  return (p * E / gamma((a+1)/a))
 }
 
 #Creation fct to calculate theorical mean and var of Erlang distrib
@@ -44,8 +47,8 @@ getMeanVarianceErlang=function(k=3, lambda){
 }
 
 
-getMeanVarianceWeibull <- function(rho, E=66, a=0.6521) {
-  b = create_b(rho)
+getMeanVarianceWeibull <- function(p, E=66, a=0.6521) {
+  b = create_b(p, E)
   
   mean = b * gamma(1+1/a)
   variance = b^2 * (gamma(1+2/a) - (gamma(1+1/a))^2 )
@@ -62,13 +65,13 @@ getMeanVarianceWeibull <- function(rho, E=66, a=0.6521) {
 
 
 # Return Wq approximation using Allen Cuneen's formula
-allen_cunnen_approx <- function(rho, lambda) {
+allen_cunnen_approx <- function(p, lambda) {
   #Obtain mean and variance for arrival times and service times for better accuracy
   #Using above given formulas
   E_arrival <- getMeanVarianceErlang(lambda = lambda)$mean
-  E_service <- getMeanVarianceWeibull(rho =)$mean
+  E_x <- getMeanVarianceWeibull(p = p, E = 66)$mean
   var_arrival <- getMeanVarianceErlang(lambda = lambda)$var
-  var_service <- getMeanVarianceWeibull(rho = rho)$var
+  var_x <- getMeanVarianceWeibull(p = p, E = 66)$var
   
   lambda <- 1/E_tau
   mu <- 1/E_x
@@ -97,24 +100,6 @@ confidence_inter=function(simu) {
   }
 }
 
-#Function to analyze the service time on N instances and compare it to the theoretical values + creating histograms :
-analysisServTime=function(p,N) {
-  m=createM(p)
-  X=rlnorm(N,log(m),sdlog=2)
-  meanX=mean(X)
-  varX=var(X)
-  C2=varX/meanX^2
-  theoricValues=MeanVarLognorm(p)
-  par(mfrow=c(2,1), mar=c(4,4,4,4))
-  
-  #histogram on all the sample :
-  hist(X,main="Service Time Histogram",xlab="Service Time", ylab="Frequency", ylim=c(0,length(X)), breaks=100, col='red')
-  
-  #histogram zoom on the revelant part :
-  hist(X,main="Zoom",xlab="Service Time", ylab="Frequency",xlim=c(0,300), ylim=c(0,length(X)), breaks=200, col='red')
-  
-  return(list(meanNum=meanX,varNum=varX, coefVar=C2,meanTheoric=theoricValues$mean,varTheoric=theoricValues$variance, coefVarTheoric=theoricValues$coefVariation))
-}
 
 #Creation fct to generate data using the recurrent relations :
 GenerateData=function(p=0.4,N=100000) {
@@ -211,7 +196,10 @@ main=function(p,N){
   #Confidence interval of the 10 simulations
   confidence_inter(simu)
   
-  return(list(Allen_Cuneen=Approx,TheoreticalW=TheoricW,simuWq=simuWq,simuLq=simuLq,simuW=simuW,simuL=simuL,meanWq=mean(simuWq),meanLq=mean(simuLq),meanW=mean(simuW),meanL=mean(simuL)))
+  return(list(Allen_Cuneen=Approx,TheoreticalW=TheoricW,
+              simuWq=simuWq,simuLq=simuLq,simuW=simuW,
+              simuL=simuL,meanWq=mean(simuWq),meanLq=mean(simuLq),
+              meanW=mean(simuW),meanL=mean(simuL)))
 }
 
 
