@@ -1,24 +1,26 @@
 # Function to analyze the service time on N instances and compare it to the theoretical values 
 # + creating histograms :
-analysisServTime=function(p, N=10000) {
+analysisServTime=function() {
   a = 0.6521
+  E_tau = 66
   
+  rho = 0.4
+  N=10000
   
-  #I have tried those by myself
-  p = 0.4
-  
-  b = create_b(p, E)
+  b = create_b(rho)
   
     
   samples = rweibull(N, shape = a, scale = b )
   
-  mean_service_samples=mean(samples)
-  var_service_samples=var(samples)
+  mean_service_samples = mean(samples)
+  var_service_samples = var(samples)
+  coeff_var_service_samples = sqrt(var_service_samples)/mean_service_samples
   
-  mean_service_theoretical = getMeanVarianceWeibull(p)$mean
-  var_service_theoretical = getMeanVarianceWeibull(p)$var
+  mean_service_theoretical = getMeanVarianceWeibull(rho)$mean
+  var_service_theoretical = getMeanVarianceWeibull(rho)$var
+  coeff_var_service_theoretical = getMeanVarianceWeibull(rho)$coeff_var
   
-  
+  par(mfrow=c(2,1), mar=c(4,4,4,4))
   
   #histogram on all the sample :
   hist(samples,main="Service Time Histogram",xlab="Service Time", 
@@ -31,55 +33,53 @@ analysisServTime=function(p, N=10000) {
   return(list(mean_service_samples=mean_service_samples, 
               mean_service_theoretical=mean_service_theoretical, 
               var_service_samples=var_service_samples, 
-              var_service_theoretical=var_service_theoretical))
+              var_service_theoretical=var_service_theoretical,
+              coeff_var_service_samples=coeff_var_service_samples,
+              coeff_var_service_theoretical=coeff_var_service_theoretical))
 }
 
 #Creation b with my E[tau]=66:
-create_b=function(p,E=66,a=0.6521) {
-  return (p * E / gamma((a+1)/a))
+create_b=function(p,E_tau=66,a=0.6521) {
+  return (p * E_tau / gamma((a+1)/a))
 }
 
 #Creation fct to calculate theorical mean and var of Erlang distrib
-getMeanVarianceErlang=function(k=3, lambda){
-  mean=k/lambda
-  var=k/lambda^2
+getMeanVarianceErlang=function(k=3, E_tau = 66){
+  
+  mean=E_tau
+  lambda = k/E_tau
+  var=k/(lambda)^2
   return(list(mean=mean, variance=var))
 }
 
 
-getMeanVarianceWeibull <- function(p, E=66, a=0.6521) {
-  b = create_b(p, E)
+getMeanVarianceWeibull <- function(p, a=0.6521) {
+  b = create_b(p)
   
   mean = b * gamma(1+1/a)
   variance = b^2 * (gamma(1+2/a) - (gamma(1+1/a))^2 )
   
-  return(list=list(mean = mean, var = variance))
+  coeff_var = sqrt(variance)/mean
+  
+  return(list=list(mean = mean, var = variance, coeff_var = coeff_var))
 }
 
-
-
-
-
-
-
-
-
 # Return Wq approximation using Allen Cuneen's formula
-allen_cunnen_approx <- function(p, lambda) {
+allen_cunnen_approx <- function(p) {
   #Obtain mean and variance for arrival times and service times for better accuracy
   #Using above given formulas
-  E_arrival <- getMeanVarianceErlang(lambda = lambda)$mean
-  E_x <- getMeanVarianceWeibull(p = p, E = 66)$mean
-  var_arrival <- getMeanVarianceErlang(lambda = lambda)$var
-  var_x <- getMeanVarianceWeibull(p = p, E = 66)$var
+  E_tau <- getMeanVarianceErlang()$mean
+  E_x <- getMeanVarianceWeibull(p)$mean
+  var_tau <- getMeanVarianceErlang()$var
+  var_x <- getMeanVarianceWeibull(p)$var
   
   lambda <- 1/E_tau
   mu <- 1/E_x
   omega <-lambda/mu
   C <- omega/(1-p+omega)
   
-  approx <- C*(lambda^2*var_tau + mu^2*var_x)/(2*mu*(1-p))
-  return(approx)
+  Wq_approx <- C*(lambda^2*var_tau + mu^2*var_x)/(2*mu*(1-p))
+  return(Wq_approx)
 }
 
 
@@ -102,19 +102,21 @@ confidence_inter=function(simu) {
 
 
 #Creation fct to generate data using the recurrent relations :
-GenerateData=function(p=0.4,N=100000) {
+GenerateData=function(p,N=100000) {
   a = 0.6521
-  rho = 1
-  
-  #E [tau]
-  E = 66
-  b = rho * E / gamma((a+1)/a)
+  b = create_b(p)
   
   #generation of service times
-  samples = rweibull(n=10000, shape = a, scale = b )
+  X = rweibull(N, shape = a, scale = b )
   
-  #generation of arrival times with rate=1/E(tau)
-  tau=rexp(N, rate=1/66)
+  E_tau = 66
+  E_stage = 22
+  K = 3 #shape
+  
+  
+  #generation of arrival times with rate=1/E(stage)
+  tau = rgamma(N, shape = K, rate = 1/E_stage)
+  
   #Initialization of statistics variables
   L=0; W=0; Lq=0; Wq=0;
   t=vector(mode='numeric', length=N)
@@ -157,7 +159,6 @@ GenerateData=function(p=0.4,N=100000) {
   return(list(W=W,Wq=Wq,L=L,Lq=Lq,t=t,LT=LT,lq=lq, wq=wq,N=N,tn=t[N]))
 }
 
-
 main=function(p,N){
   #Generation of 10 simulations
   simu=list(GenerateData(p,N))
@@ -188,15 +189,15 @@ main=function(p,N){
   dev.off()
   
   #Calculate theorical Allen Cuneen values:
-  Approx=Allen_Cuneen(p)
+  Approx=allen_cunnen_approx(p)
   
   #Calcul of theorical W,Lq,L values with Allen Cuneen approximation
-  TheoricW=Approx+p*78
+  #TheoricW=Approx+p*78
   
   #Confidence interval of the 10 simulations
   confidence_inter(simu)
   
-  return(list(Allen_Cuneen=Approx,TheoreticalW=TheoricW,
+  return(list(Allen_Cuneen=Approx,
               simuWq=simuWq,simuLq=simuLq,simuW=simuW,
               simuL=simuL,meanWq=mean(simuWq),meanLq=mean(simuLq),
               meanW=mean(simuW),meanL=mean(simuL)))
@@ -205,7 +206,7 @@ main=function(p,N){
 
 
 ############1###########
-sampling()
+analysisServTime()
 
 
 
@@ -213,9 +214,7 @@ sampling()
 p=c(0.4, 0.7, 0.85, 0.925)
 N = 100000
   
-for(rho in p){
-  main(rho,N)
-}
+main(p[4],N)
   
   
   
