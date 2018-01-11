@@ -1,10 +1,9 @@
 # Function to analyze the service time on N instances and compare it to the theoretical values 
 # + creating histograms :
-analysisServTime=function() {
+analysisServTime=function(rho) {
   a = 0.6521
   E_tau = 66
   
-  rho = 0.4
   N=10000
   
   b = create_b(rho)
@@ -79,7 +78,9 @@ allen_cunnen_approx <- function(p) {
   C <- omega/(1-p+omega)
   
   Wq_approx <- C*(lambda^2*var_tau + mu^2*var_x)/(2*mu*(1-p))
-  return(Wq_approx)
+  
+  Lq_approx <- (lambda^2*var_tau+p^2*mu^2*var_x)/(2*(1-p))
+  return(list(Wq_approx=Wq_approx, Lq_approx=Lq_approx))
 }
 
 
