@@ -207,7 +207,7 @@ main=function(p,N){
 
 
 ############1###########
-analysisServTime()
+analysisServTime(rho=0.4)
 
 
 
